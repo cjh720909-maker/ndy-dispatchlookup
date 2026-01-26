@@ -1,0 +1,11 @@
+version: '3'
+services:
+  logistics-app:
+    container_name: daily-logistics
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    # .env 파일에 있는 설정을 그대로 가져옵니다
+    env_file:
+      - .env
