@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     // Mobile dispatch protection
     if (request.nextUrl.pathname.startsWith('/mobile')) {
         const session = request.cookies.get('logistics_session');
