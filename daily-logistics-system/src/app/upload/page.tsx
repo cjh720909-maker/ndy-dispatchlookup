@@ -1,4 +1,3 @@
-import LogList from '@/app/upload/log-list'; // We will create this or inline it?
 // Server Components allow inline async logic.
 
 import { prisma } from '@/lib/prisma';
