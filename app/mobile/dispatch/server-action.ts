@@ -153,7 +153,7 @@ export async function getRealDispatchData(searchTerm: string, dateStr?: string):
       const pName = fromLegacy(order.productName) || '제품명 없음';
       const weight = order.weight ? Number(order.weight).toString() : '0';
       const qty = order.qty || 0;
-      const missingQty = order.missouts?.reduce((sum, m) => sum + (m.qty || 0), 0) || 0;
+      const missingQty = order.missouts?.reduce((sum: number, m: any) => sum + (m.qty || 0), 0) || 0;
       const outQty = Math.max(0, qty - missingQty);
 
       groupedMap.get(groupKey)?.items.push({
