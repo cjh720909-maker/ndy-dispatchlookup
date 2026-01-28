@@ -86,8 +86,8 @@ export default function LoginPage() {
                     </form>
                 </div>
 
-                <p className="text-center text-xs text-slate-600">
-                    테스트 계정: has / das / admin (PW: 1234)
+                <p className="text-center text-xs text-slate-500 font-medium">
+                    (주) 엔디와이
                 </p>
             </div>
         </div>
