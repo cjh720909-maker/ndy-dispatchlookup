@@ -38,16 +38,13 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-sm space-y-8">
-                <div className="text-center space-y-2">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 mb-4 shadow-lg shadow-blue-500/20">
+                <div className="text-center space-y-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 mb-2 shadow-lg shadow-blue-500/20">
                         <Truck className="h-8 w-8 text-white" />
                     </div>
-                    <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-                        Logistics Pro
+                    <h1 className="text-3xl font-extrabold text-white">
+                        배차조회
                     </h1>
-                    <p className="text-slate-400 text-sm">
-                        배차 관리 시스템 로그인
-                    </p>
                 </div>
 
                 <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-6 rounded-2xl shadow-xl">
