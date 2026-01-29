@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../lib/generated/logistics"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. 발주/주문 테이블 (t_balju)
+model Order {
+  id              Int      @id @default(autoincrement()) @map("B_IDX")
+  date            String?  @map("B_DATE")
+  
+  productCode     String?  @map("B_P_NO")   
+  productName     String?  @map("B_P_NAME") 
+  qty             Int      @default(0) @map("B_QTY") // 원주문수량
+  outQty          Int      @default(0) @map("O_QTY") // 출고수량
+  weight          Decimal  @default(0.00) @map("B_KG") 
+
+  customerName    String?  @map("B_C_NAME")
+  customerCode    String?  @map("B_C_CODE")
+  driverName      String?  @map("CB_DRIVER") 
+  deliveryPointId Int?     @map("CB_IDX")
+
+  // 회사 구분 컬럼
+  companyNameInTable String? @map("C_NAME")
+
+  // 관계 설정
+  vehicle         Vehicle? @relation(fields: [driverName], references: [driverName])
+  deliveryPoint   DeliveryPoint? @relation(fields: [deliveryPointId], references: [id])
+  
+  // 미출(결품) 테이블 연결
+  missouts        Missout[]
+
+  @@map("t_balju")
+}
+
+model Missout {
+  id        Int     @id @default(autoincrement()) @map("MO_IDX")
+  orderId   Int?    @map("B_IDX")
+  qty       Int     @default(0) @map("B_QTY")
+  
+  order     Order?  @relation(fields: [orderId], references: [id])
+
+  @@map("t_missout")
+}
+
+model Vehicle {
+  driverName  String  @unique @map("CB_DRIVER") 
+  realDriverName String? @map("CA_NAME")
+  vehicleNo   String? @map("CA_NO")      
+  driverPhone String? @map("CA_HP")      
+  dockNo      String? @map("CA_DOCKNO") 
+
+  orders      Order[]
+
+  @@map("t_car")
+}
+
+model DeliveryPoint {
+  id          Int     @id @default(autoincrement()) @map("CB_IDX")
+  name        String? @map("CB_NAME")
+  defaultDriver String? @map("CB_DRIVER")
+  code        String? @map("CB_CODE")
+  routingBind String? @map("CB_BIND") 
+  address     String? @map("CB_ADDRESS") 
+
+  orders      Order[]
+
+  @@map("t_cust_bae")
+}

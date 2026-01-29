@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+daily-logistics-system
+*.tar
+npm-debug.log
+.DS_Store
