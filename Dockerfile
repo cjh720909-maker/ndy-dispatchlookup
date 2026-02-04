@@ -2,6 +2,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# [추가] 강제로 운영 환경(Postgres) 빌드로 인식시킴
+ENV FORCE_POSTGRES_BUILD=1
+
 # Prisma가 Alpine 리눅스에서 돌려면 openssl이 필요합니다.
 RUN apk add --no-cache openssl
 

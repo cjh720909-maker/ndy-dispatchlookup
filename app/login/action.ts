@@ -41,7 +41,7 @@ export async function login(formData: FormData) {
 
     } catch (error) {
         console.error('[Login Error]', error);
-        return { error: '로그인 도중 서버 오류가 발생했습니다.' };
+        return { error: `로그인 오류: ${(error as Error).message}` };
     }
 
     redirect('/mobile/dispatch');
