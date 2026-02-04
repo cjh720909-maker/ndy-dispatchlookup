@@ -4,11 +4,63 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("POSTGRES_PRISMA_URL")
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
+// [기존 테이블 - Introspection으로 가져옴]
+model Affiliation {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Driver {
+  id          Int      @id @default(autoincrement())
+  name        String
+  affiliation String?
+  tonnage     String?
+  createdAt   DateTime @default(now())
+  address     String?
+  memo        String?
+  regDate     String?
+  updatedAt   DateTime
+}
+
+model FeeMaster {
+  id          Int      @id @default(autoincrement())
+  affiliation String
+  tonnage     String
+  fee         Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  memo        String?
+  readonly    Boolean  @default(false)
+  region      String
+  updatedAt   DateTime
+  year        Int
+}
+
+model SettlementHistory {
+  id          Int      @id @default(autoincrement())
+  date        String
+  driverName  String
+  affiliation String?
+  tonnage     String?
+  destCount   Int
+  totalWeight Int
+  fee         Int
+  memo        String?
+  createdAt   DateTime @default(now())
+  isPbox      Boolean  @default(false)
+  isReturn    Boolean  @default(false)
+  nap         String?
+  so          String?
+  ton         Int?
+}
+
+// [새로 추가 - 로그인용]
 model User {
   id          Int      @id @default(autoincrement())
   username    String   @unique
