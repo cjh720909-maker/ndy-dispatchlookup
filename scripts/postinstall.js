@@ -15,9 +15,7 @@ const isVercel = process.env.VERCEL === '1';
 
 console.log(`환경 체크: ${isVercel ? 'Vercel(운영)' : '로컬(개발)'}`);
 
-
-// [수정 후]
-if (isVercel || process.env.POSTGRES_PRISMA_URL) {
+if (isVercel || process.env.POSTGRES_PRISMA_URL || process.env.FORCE_POSTGRES_BUILD) {
     // 운영 환경: Postgres 스키마 사용
     run('npx prisma generate --schema=./prisma/auth/schema.postgresql.prisma');
     run('npx prisma generate --schema=./prisma/logistics/schema.prisma');
