@@ -57,29 +57,6 @@ model VehicleInfo {
   updatedAt        DateTime @updatedAt
 }
 
-// 용차 단가 설정
-model VehicleRate {
-  id          Int      @id @default(autoincrement())
-  driverName  String   @unique // MySQL의 CB_DRIVER와 매핑
-  basePrice   Int      @default(0)
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// 용차 정산 리포트
-model DispatchReport {
-  id          Int      @id @default(autoincrement())
-  date        String   // "YYYY-MM-DD"
-  driverName  String   // MySQL의 CB_DRIVER와 매핑
-  boxCount    Int      @default(0)
-  isReturn    Boolean  @default(false)
-  price       Int      @default(0)
-  remarks     String?
-  createdAt   DateTime @default(now())
-
-  @@unique([date, driverName])
-}
 
 // 배수 순서 설정
 model DeliverySequence {
