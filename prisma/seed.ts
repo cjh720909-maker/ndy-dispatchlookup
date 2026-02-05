@@ -5,18 +5,23 @@ const prisma = new PrismaClient();
 
 async function main() {
     const username = 'admin';
-    const password = 'password1234'; // 초기 비밀번호 (설치 후 변경 필요)
+    const password = '1234'; // 테스트를 위해 간단한 비밀번호로 변경
     const hashedPassword = await bcrypt.hash(password, 10);
 
     console.log('초기 계정 생성 시작...');
 
     const user = await prisma.user.upsert({
         where: { username: username },
-        update: {},
+        update: {
+            password: hashedPassword,
+            role: 'staff',
+            companyName: '관리자',
+        },
         create: {
             username: username,
             password: hashedPassword,
-            companyName: null, // Admin은 회사 구분 없음
+            role: 'staff',
+            companyName: '관리자',
         },
     });
 

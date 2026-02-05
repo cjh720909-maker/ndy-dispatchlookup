@@ -38,7 +38,10 @@ import { getSession } from '../../../lib/auth';
 
 export async function getUserInfo() {
   const session = await getSession();
-  return { username: session?.username || null };
+  return {
+    username: session?.username || null,
+    role: session?.role || null
+  };
 }
 
 export async function getRealDispatchData(searchTerm: string, dateStr?: string): Promise<{ data: DispatchGroup[], totalCount: number, error?: string }> {

@@ -1,6 +1,10 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '../../../lib/auth';
-import { getUsers, addUser, deleteUser } from './server-action';
+import { getUsers } from './server-action';
+import AddUserForm from './AddUserForm';
+import UserList from './UserList';
+import { Users, Truck, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default async function AdminUsersPage() {
     const session = await getSession();
@@ -13,123 +17,44 @@ export default async function AdminUsersPage() {
     const { data: users, error } = await getUsers();
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 font-sans">
-            <div className="max-w-4xl mx-auto">
-                <header className="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-800">사용자 관리</h1>
-                        <p className="text-gray-500 text-sm mt-1">로그인 계정을 생성하고 관리합니다.</p>
+        <div className="min-h-screen bg-slate-50 relative pb-20">
+            <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-20 shadow-lg">
+                <div className="max-w-5xl mx-auto p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <Link href="/daily-dispatch" className="p-2 hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Link>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-500/20">
+                                <Users className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-black text-white leading-tight">사용자 관리</h1>
+                                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Admin Control Panel</p>
+                            </div>
+                        </div>
                     </div>
-                    <a
-                        href="/mobile/dispatch"
-                        className="text-sm px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                        홈으로 돌아가기
-                    </a>
-                </header>
+                </div>
+            </header>
 
+            <main className="max-w-5xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm">
+                    <div className="p-4 bg-red-50 border-2 border-red-100 text-red-600 rounded-2xl text-sm font-bold flex items-center gap-3">
+                        <div className="bg-red-100 p-1.5 rounded-lg">!</div>
                         {error}
                     </div>
                 )}
 
-                {/* 계정 추가 폼 */}
-                <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-4">신규 계정 추가</h2>
-                    <form action={async (formData) => {
-                        'use server';
-                        await addUser(formData);
-                    }} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input
-                            name="username"
-                            type="text"
-                            placeholder="아이디"
-                            required
-                            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-                        />
-                        <input
-                            name="password"
-                            type="password"
-                            placeholder="비밀번호"
-                            required
-                            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-                        />
-                        <input
-                            name="companyName"
-                            type="text"
-                            placeholder="회사명 (선택)"
-                            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-                        />
-                        <button
-                            type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 active:scale-95 transition-all text-sm shadow-md shadow-blue-100"
-                        >
-                            계정 생성하기
-                        </button>
-                    </form>
-                </section>
+                {/* 계정 추가 폼 (Client Component) */}
+                <AddUserForm />
 
-                {/* 사용자 목록 */}
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100">
-                        <h2 className="text-lg font-semibold text-gray-800">등록된 계정 목록</h2>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">아이디</th>
-                                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">소속 회사</th>
-                                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">생성일</th>
-                                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">작업</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {users?.map((user: any) => (
-                                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.username}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {user.companyName ? (
-                                                <span className="px-2 py-1 bg-green-50 text-green-600 rounded-md text-xs font-medium">
-                                                    {user.companyName}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 italic">관리자</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(user.createdAt).toLocaleDateString('ko-KR')}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                            {user.username !== 'admin' && (
-                                                <form action={async () => {
-                                                    'use server';
-                                                    await deleteUser(user.id);
-                                                }}>
-                                                    <button
-                                                        type="submit"
-                                                        className="text-red-500 hover:text-red-700 font-medium transition-colors"
-                                                    >
-                                                        삭제
-                                                    </button>
-                                                </form>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {users?.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="px-6 py-10 text-center text-gray-400 text-sm">
-                                            등록된 사용자가 없습니다.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
+                {/* 사용자 목록 (Client Component for immediate delete feedback) */}
+                <UserList initialUsers={users || []} />
+            </main>
+
+            <footer className="max-w-5xl mx-auto px-6 py-8 text-center text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-tighter">© {(new Date()).getFullYear()} (주) 엔디와이 ndy-dispatchlookup</p>
+            </footer>
         </div>
     );
 }

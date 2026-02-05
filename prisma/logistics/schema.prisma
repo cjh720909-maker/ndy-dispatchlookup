@@ -22,6 +22,7 @@ model Order {
 
   customerName    String?  @map("B_C_NAME")
   customerCode    String?  @map("B_C_CODE")
+  cbCode          String?  @map("CB_CODE")
   driverName      String?  @map("CB_DRIVER") 
   deliveryPointId Int?     @map("CB_IDX")
 
@@ -67,6 +68,8 @@ model DeliveryPoint {
   code        String? @map("CB_CODE")
   routingBind String? @map("CB_BIND") 
   address     String? @map("CB_ADDRESS") 
+  phone       String? @map("CB_PHONE")
+  hp          String? @map("CB_HP")
 
   orders      Order[]
 

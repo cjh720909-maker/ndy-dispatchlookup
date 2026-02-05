@@ -11,9 +11,14 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
 
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   // 현재 사용자 정보 가져오기
   useEffect(() => {
-    getUserInfo().then(info => setCurrentUser(info.username));
+    getUserInfo().then(info => {
+      setCurrentUser(info.username);
+      setUserRole(info.role);
+    });
   }, []);
 
   // 날짜 설정 (KST 기준 오늘 날짜)
@@ -171,6 +176,14 @@ export default function App() {
             </h1>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold bg-blue-700 px-2.5 py-1 rounded-full">{selectedDate}</span>
+              {(userRole === 'admin' || userRole === 'staff') && (
+                <Link
+                  href="/daily-dispatch"
+                  className="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2.5 py-1 rounded-full font-black shadow-lg shadow-amber-500/20 transition-all border border-amber-400"
+                >
+                  용차 배차
+                </Link>
+              )}
               {currentUser === 'admin' && (
                 <Link
                   href="/admin/users"
@@ -249,8 +262,8 @@ export default function App() {
                 key={item.groupKey}
                 onClick={() => setSelectedDispatch(item)}
                 className={`rounded-xl p-3 border shadow-sm cursor-pointer active:scale-[0.98] transition-all hover:border-blue-300 ${hasMissing
-                    ? 'bg-red-50 border-red-200 hover:bg-red-100'
-                    : 'bg-white border-slate-200'
+                  ? 'bg-red-50 border-red-200 hover:bg-red-100'
+                  : 'bg-white border-slate-200'
                   }`}
               >
                 <div className="flex justify-between items-start mb-2 gap-2">

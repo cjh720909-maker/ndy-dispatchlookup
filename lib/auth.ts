@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 
-export async function setSession(data: { username: string; companyName: string | null }) {
+export async function setSession(data: { username: string; role: string; companyName: string | null }) {
     const cookieStore = await cookies();
     cookieStore.set('logistics_session', JSON.stringify(data), {
         httpOnly: true,

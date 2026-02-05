@@ -4,67 +4,92 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
 }
 
-// [기존 테이블 - Introspection으로 가져옴]
-model Affiliation {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
-}
-
-model Driver {
-  id          Int      @id @default(autoincrement())
-  name        String
-  affiliation String?
-  tonnage     String?
-  createdAt   DateTime @default(now())
-  address     String?
-  memo        String?
-  regDate     String?
-  updatedAt   DateTime
-}
-
-model FeeMaster {
-  id          Int      @id @default(autoincrement())
-  affiliation String
-  tonnage     String
-  fee         Int
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  memo        String?
-  readonly    Boolean  @default(false)
-  region      String
-  updatedAt   DateTime
-  year        Int
-}
-
-model SettlementHistory {
-  id          Int      @id @default(autoincrement())
-  date        String
-  driverName  String
-  affiliation String?
-  tonnage     String?
-  destCount   Int
-  totalWeight Int
-  fee         Int
-  memo        String?
-  createdAt   DateTime @default(now())
-  isPbox      Boolean  @default(false)
-  isReturn    Boolean  @default(false)
-  nap         String?
-  so          String?
-  ton         Int?
-}
-
-// [새로 추가 - 로그인용]
+// 사용자/로그인 정보
 model User {
   id          Int      @id @default(autoincrement())
   username    String   @unique
   password    String
-  companyName String?
+  role        String   @default("customer") // "staff", "customer", "transport"
+  companyName String?  // "하회", "대상" 등, 운수업체명 등
   createdAt   DateTime @default(now())
+}
+
+// 당일 기사/용차 등록 정보
+model DailyDriverRegistration {
+  id               Int      @id @default(autoincrement())
+  date             String   // "YYYY-MM-DD"
+  driverName       String
+  transportCompany String   // 운수업체명 (User.companyName 등과 매핑)
+  vehicleNumber    String?  // 차량번호
+  phoneNumber      String?  // 연락처
+  realDriverName   String?  // 매칭된 기사 실명 추가
+  isRegistered     Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  @@unique([date, driverName, transportCompany])
+}
+
+// 운수업체별 전담 기사 풀 (Master List)
+model TransportDriver {
+  id               Int      @id @default(autoincrement())
+  name             String
+  phoneNumber      String
+  vehicleNumber    String?
+  transportCompany String   // User.companyName ("이룸" 등)
+  createdAt        DateTime @default(now())
+
+  @@unique([name, phoneNumber, transportCompany])
+}
+
+// 용차/기사 정보 서브 정보 (MySQL t_car에 대한 확장 정보)
+model VehicleInfo {
+  id               Int      @id @default(autoincrement())
+  driverName       String   @unique // MySQL의 CB_DRIVER와 매핑
+  vehicleType      String   @default("fixed") // "fixed", "outsourced"
+  transportCompany String?  // 소속 운수업체명
+  phoneNumber      String?  // 연락처 추가
+  memo             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// 용차 단가 설정
+model VehicleRate {
+  id          Int      @id @default(autoincrement())
+  driverName  String   @unique // MySQL의 CB_DRIVER와 매핑
+  basePrice   Int      @default(0)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// 용차 정산 리포트
+model DispatchReport {
+  id          Int      @id @default(autoincrement())
+  date        String   // "YYYY-MM-DD"
+  driverName  String   // MySQL의 CB_DRIVER와 매핑
+  boxCount    Int      @default(0)
+  isReturn    Boolean  @default(false)
+  price       Int      @default(0)
+  remarks     String?
+  createdAt   DateTime @default(now())
+
+  @@unique([date, driverName])
+}
+
+// 배수 순서 설정
+model DeliverySequence {
+  id          Int      @id @default(autoincrement())
+  date        String   // "YYYY-MM-DD"
+  driverName  String   // MySQL의 CB_DRIVER와 매핑
+  cbCode      String   // t_cust_bae의 CB_CODE
+  sequence    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date, driverName, cbCode])
 }

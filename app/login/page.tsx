@@ -42,8 +42,8 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 mb-2 shadow-lg shadow-blue-500/20">
                         <Truck className="h-8 w-8 text-white" />
                     </div>
-                    <h1 className="text-3xl font-extrabold text-white">
-                        배차조회
+                    <h1 className="text-3xl font-extrabold text-white tracking-tighter">
+                        ndy-dispatchlookup
                     </h1>
                 </div>
 
@@ -83,8 +83,8 @@ export default function LoginPage() {
                     </form>
                 </div>
 
-                <p className="text-center text-xs text-slate-500 font-medium">
-                    (주) 엔디와이
+                <p className="text-center text-xs text-slate-500 font-black uppercase tracking-widest">
+                    (주) 엔디와이 ndy-dispatchlookup
                 </p>
             </div>
         </div>

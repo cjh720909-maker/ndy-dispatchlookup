@@ -14,6 +14,7 @@ export async function getUsers() {
             select: {
                 id: true,
                 username: true,
+                role: true,
                 companyName: true,
                 createdAt: true,
             }
@@ -31,30 +32,48 @@ export async function getUsers() {
 export async function addUser(formData: FormData) {
     const username = formData.get('username') as string;
     const password = formData.get('password') as string;
+    const role = formData.get('role') as string;
     const companyName = formData.get('companyName') as string;
 
+    console.log(`[addUser] Attempting to create user: ${username}, Role: ${role}`);
+
     if (!username || !password) {
+        console.warn('[addUser] Missing username or password');
         return { error: '아이디와 비밀번호를 모두 입력해 주세요.' };
     }
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        await authDb.user.create({
+        console.log('[addUser] Password hashed successfully');
+
+        const newUser = await authDb.user.create({
             data: {
                 username,
                 password: hashedPassword,
+                role: role || 'customer',
                 companyName: companyName || null,
             }
         });
 
-        revalidatePath('/admin/users');
+        console.log(`[addUser] User created successfully: ID ${newUser.id}`);
+
+        try {
+            revalidatePath('/admin/users');
+        } catch (revalidateError) {
+            console.warn('[addUser] revalidatePath failed (can be ignored in dev):', revalidateError);
+        }
+
         return { success: true };
     } catch (error: any) {
+        console.error('[addUser Exception]', error);
+
         if (error.code === 'P2002') {
             return { error: '이미 존재하는 아이디입니다.' };
         }
-        console.error('[addUser Error]', error);
-        return { error: '사용자 생성 중 오류가 발생했습니다.' };
+
+        return {
+            error: `사용자 생성 중 오류가 발생했습니다: ${error.message || '알 수 없는 DB 오류'}`
+        };
     }
 }
 

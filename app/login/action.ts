@@ -36,13 +36,23 @@ export async function login(formData: FormData) {
         // 3. 세션 설정
         await setSession({
             username: user.username,
+            role: user.role,
             companyName: user.companyName
         });
 
+        // 4. 역할에 따른 리다이렉션
+        if (user.role === 'customer') {
+            redirect('/mobile/dispatch');
+        } else {
+            // 직원(staff) 또는 운수업체(transport)는 당일 배차 화면으로
+            redirect('/daily-dispatch');
+        }
+
     } catch (error) {
+        if ((error as any).digest?.startsWith('NEXT_REDIRECT')) {
+            throw error;
+        }
         console.error('[Login Error]', error);
         return { error: `로그인 오류: ${(error as Error).message}` };
     }
-
-    redirect('/mobile/dispatch');
 }

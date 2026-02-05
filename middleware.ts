@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-    // 모바일 배차 페이지 보호
-    if (request.nextUrl.pathname.startsWith('/mobile')) {
+    // 보호된 경로 확인
+    if (request.nextUrl.pathname.startsWith('/mobile') || request.nextUrl.pathname.startsWith('/daily-dispatch')) {
         const session = request.cookies.get('logistics_session');
 
         if (!session) {
@@ -17,5 +17,5 @@ export function middleware(request: NextRequest) {
 
 // 미들웨어가 실행될 경로 설정
 export const config = {
-    matcher: ['/mobile/:path*'],
+    matcher: ['/mobile/:path*', '/daily-dispatch/:path*'],
 };
