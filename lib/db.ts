@@ -9,26 +9,16 @@ const globalForPrisma = global as unknown as {
 };
 
 // 환경에 따른 Auth DB URL 설정
-const isProduction = process.env.VERCEL === '1' || !!process.env.POSTGRES_PRISMA_URL;
-
-// 로컬에서는 SQLite 상대 경로 사용 (한글 경로/공백 등 경로 인식 문제 방지)
-const authDbUrl = isProduction ? process.env.POSTGRES_PRISMA_URL : `file:./prisma/auth/auth.db`;
-
-if (!isProduction) {
-    process.env.AUTH_DATABASE_URL = authDbUrl;
-    // 개발 환경에서는 캐시된 인스턴스를 무효화하여 최신 설정을 반영함
-    if (globalForPrisma.authDb) {
-        (globalForPrisma as any).authDb = undefined;
-    }
-}
+// Vercel 환경에서만 PostgreSQL(운영)을 사용하고, 로컬 개발 시에는 SQLite를 우선합니다.
+const isProduction = process.env.VERCEL === '1' && process.env.NODE_ENV === 'production';
 
 console.log(`[DB Init] Auth DB 모드: ${isProduction ? 'PostgreSQL (Neon)' : 'SQLite (Local)'}`);
 if (!isProduction) {
-    console.log('[DB Init] Auth DB URL:', process.env.AUTH_DATABASE_URL);
+    console.log('[DB Init] Auth DB URL (from ENV):', process.env.AUTH_DATABASE_URL);
 }
 
 export const authDb =
-    (!isProduction ? undefined : globalForPrisma.authDb) ||
+    globalForPrisma.authDb ||
     new PrismaClientAuth({
         log: ['error', 'warn'],
     });
