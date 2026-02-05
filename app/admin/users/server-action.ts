@@ -97,3 +97,20 @@ export async function deleteUser(id: number) {
         return { error: '사용자 삭제 중 오류가 발생했습니다.' };
     }
 }
+
+/**
+ * 사용자의 비밀번호를 '1234'로 초기화합니다.
+ */
+export async function resetUserPassword(id: number) {
+    try {
+        const hashedPassword = await bcrypt.hash('1234', 10);
+        await authDb.user.update({
+            where: { id },
+            data: { password: hashedPassword }
+        });
+        return { success: true };
+    } catch (error) {
+        console.error('[resetUserPassword Error]', error);
+        return { error: '비밀번호 초기화 중 오류가 발생했습니다.' };
+    }
+}

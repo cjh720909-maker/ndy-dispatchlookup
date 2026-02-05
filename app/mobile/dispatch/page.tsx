@@ -176,7 +176,7 @@ export default function App() {
             </h1>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold bg-blue-700 px-2.5 py-1 rounded-full">{selectedDate}</span>
-              {(userRole === 'admin' || userRole === 'staff') && (
+              {(userRole === 'admin' || userRole === 'staff' || currentUser === 'admin') && (
                 <Link
                   href="/daily-dispatch"
                   className="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2.5 py-1 rounded-full font-black shadow-lg shadow-amber-500/20 transition-all border border-amber-400"
@@ -192,8 +192,14 @@ export default function App() {
                   아이디 관리
                 </Link>
               )}
+              <Link
+                href="/settings"
+                className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1 rounded-full font-bold transition-colors border border-slate-600"
+              >
+                설정
+              </Link>
               <form action={logoutAction}>
-                <button type="submit" className="text-xs bg-blue-800 hover:bg-blue-700 text-blue-100 px-2.5 py-1 rounded-full font-bold transition-colors">
+                <button type="submit" className="text-xs bg-blue-800 hover:bg-blue-700 text-blue-100 px-2.5 py-1 rounded-full font-bold transition-colors md:ml-2">
                   로그아웃
                 </button>
               </form>

@@ -166,9 +166,9 @@ export default function DailyDispatchPage() {
 
                         <button
                             onClick={() => setShowPoolManager(true)}
-                            disabled={user?.role === 'staff'}
-                            className={`p-2 rounded-full text-slate-400 transition-colors ${user?.role === 'staff' ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-800'}`}
-                            title={user?.role === 'staff' ? "권한이 없습니다" : "기사 목록 관리"}
+                            disabled={user?.role === 'staff' && user?.username !== 'admin'}
+                            className={`p-2 rounded-full text-slate-400 transition-colors ${(user?.role === 'staff' && user?.username !== 'admin') ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-800'}`}
+                            title={(user?.role === 'staff' && user?.username !== 'admin') ? "권한이 없습니다" : "기사 목록 관리"}
                         >
                             <UserCog className="h-5 w-5" />
                         </button>
@@ -182,6 +182,14 @@ export default function DailyDispatchPage() {
                                 <Plus className="h-3.5 w-3.5" /> 계정 생성
                             </Link>
                         )}
+
+                        <Link
+                            href="/settings"
+                            className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400"
+                            title="설정"
+                        >
+                            <Settings className="h-5 w-5" />
+                        </Link>
 
                         <form action={logoutAction}>
                             <button type="submit" className="p-2 hover:bg-slate-800 rounded-full transition-colors" title="로그아웃">

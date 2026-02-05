@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { deleteUser } from './server-action';
-import { Trash2, ShieldCheck, User, Building2, Calendar, Users } from 'lucide-react';
+import { deleteUser, resetUserPassword } from './server-action';
+import { Trash2, ShieldCheck, User, Building2, Calendar, Users, RotateCcw } from 'lucide-react';
 
 interface UserData {
     id: number;
@@ -31,6 +31,17 @@ export default function UserList({ initialUsers }: { initialUsers: any[] }) {
         if (result?.error) {
             alert(result.error);
             setUsers(originalUsers);
+        }
+    }
+
+    async function handleResetPassword(id: number, username: string) {
+        if (!confirm(`[${username}] 계정의 비밀번호를 '1234'로 초기화하시겠습니까?`)) return;
+
+        const result = await resetUserPassword(id);
+        if (result?.error) {
+            alert(result.error);
+        } else {
+            alert('비밀번호가 1234로 초기화되었습니다.');
         }
     }
 
@@ -96,12 +107,22 @@ export default function UserList({ initialUsers }: { initialUsers: any[] }) {
                                 </td>
                                 <td className="px-8 py-5 whitespace-nowrap text-right">
                                     {user.username !== 'admin' ? (
-                                        <button
-                                            onClick={() => handleDelete(user.id)}
-                                            className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95"
-                                        >
-                                            <Trash2 className="h-5 w-5" />
-                                        </button>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => handleResetPassword(user.id, user.username)}
+                                                className="p-2.5 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all active:scale-95"
+                                                title="비밀번호 초기화 (1234)"
+                                            >
+                                                <RotateCcw className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(user.id)}
+                                                className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+                                                title="계정 삭제"
+                                            >
+                                                <Trash2 className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     ) : (
                                         <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest px-3">System</span>
                                     )}
