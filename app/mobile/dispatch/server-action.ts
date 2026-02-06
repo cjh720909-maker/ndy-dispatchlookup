@@ -73,7 +73,7 @@ export async function getRealDispatchData(searchTerm: string, dateStr?: string):
     };
 
     // 4단계 권한 체크
-    const isAdmin = session.username === 'admin';
+    const isAdmin = session.username === 'admin' || session.role === 'admin';
     const isNDY = session.role === 'staff' && (!session.companyName || session.companyName === 'NDY' || session.companyName === '관리자') && !isAdmin;
     const isCustomer = session.role === 'customer';
     const isLogistics = !isAdmin && !isNDY && !isCustomer && !!session.companyName;

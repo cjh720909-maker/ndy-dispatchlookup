@@ -184,7 +184,7 @@ export default function App() {
                   용차 배차
                 </Link>
               )}
-              {currentUser === 'admin' && (
+              {userRole === 'admin' && (
                 <Link
                   href="/admin/users"
                   className="text-xs bg-white text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-full font-bold transition-colors"

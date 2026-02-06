@@ -9,8 +9,8 @@ import Link from 'next/link';
 export default async function AdminUsersPage() {
     const session = await getSession();
 
-    // Admin 권한 확인 (admin 아이디만 접근 가능)
-    if (!session || session.username !== 'admin') {
+    // Admin 권한 확인
+    if (!session || session.role !== 'admin') {
         redirect('/login');
     }
 

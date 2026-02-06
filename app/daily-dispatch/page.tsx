@@ -144,7 +144,7 @@ export default function DailyDispatchPage() {
     const unregisteredCount = data.filter(d => !d.isRegistered).length;
 
     // 권한 체크 로직 (4단계 그룹화)
-    const isAdmin = user?.username === 'admin';
+    const isAdmin = user?.role === 'admin';
     const isNDY = user?.role === 'staff' && (!user?.companyName || user?.companyName === 'NDY' || user?.companyName === '관리자') && !isAdmin;
     const isCustomer = user?.role === 'customer';
     const isLogistics = !isAdmin && !isNDY && !isCustomer && !!user?.companyName;
@@ -205,7 +205,7 @@ export default function DailyDispatchPage() {
                                 </Link>
                             )}
 
-                            {user?.username === 'admin' && (
+                            {isAdmin && (
                                 <Link
                                     href="/admin/users"
                                     className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-black transition-all shadow-lg shadow-blue-500/20"

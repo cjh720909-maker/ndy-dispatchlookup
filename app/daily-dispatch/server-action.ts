@@ -52,7 +52,7 @@ export async function getDailyDispatchData(dateStr: string) {
     if (!session) return { error: '세션이 만료되었습니다.' };
 
     try {
-        const isAdmin = session.username === 'admin';
+        const isAdmin = session.username === 'admin' || session.role === 'admin';
         const isNDY = session.role === 'staff' && (!session.companyName || session.companyName === 'NDY' || session.companyName === '관리자') && !isAdmin;
         const isCustomer = session.role === 'customer';
         const isLogistics = !isAdmin && !isNDY && !isCustomer && !!session.companyName;
@@ -321,7 +321,7 @@ export async function updateDriverInPool(id: number, formData: FormData) {
         const driverPoolDelegate = (authDb as any).transportDriver;
 
         // 본인 업체 소속인지 확인 (어드민 제외)
-        if (session.role !== 'admin') {
+        if (session.username !== 'admin' && session.role !== 'admin') {
             const existing = await driverPoolDelegate.findUnique({ where: { id } });
             if (existing && existing.transportCompany !== session.companyName) {
                 return { error: '수정 권한이 없습니다.' };
@@ -337,7 +337,7 @@ export async function updateDriverInPool(id: number, formData: FormData) {
 
         // 관리자는 소속 회사도 수정 가능
         const transportCompany = formData.get('transportCompany') as string;
-        if ((session.role === 'admin' || session.role === 'staff') && transportCompany) {
+        if ((session.username === 'admin' || session.role === 'admin' || session.role === 'staff') && transportCompany) {
             updateData.transportCompany = transportCompany;
         }
 
