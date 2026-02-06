@@ -17,9 +17,21 @@ if (!isProduction) {
     console.log('[DB Init] Auth DB URL (from ENV):', process.env.AUTH_DATABASE_URL);
 }
 
+// 운영 환경(Vercel)에서는 POSTGRES_PRISMA_URL을 사용하고, 
+// 주소에 schema 설정이 없으면 자동으로 ndy_auth를 붙여줍니다.
+const getAuthDbUrl = () => {
+    let url = process.env.POSTGRES_PRISMA_URL;
+    if (url && !url.includes('schema=')) {
+        const separator = url.includes('?') ? '&' : '?';
+        url = `${url}${separator}schema=ndy_auth`;
+    }
+    return url;
+};
+
 export const authDb =
     globalForPrisma.authDb ||
     new PrismaClientAuth({
+        datasourceUrl: isProduction ? getAuthDbUrl() : process.env.AUTH_DATABASE_URL,
         log: ['error', 'warn'],
     });
 
