@@ -52,10 +52,27 @@ export async function getDailyDispatchData(dateStr: string) {
     if (!session) return { error: '세션이 만료되었습니다.' };
 
     try {
-        // 1. 운수업체 기사 풀(Master Pool) 가져오기
+        const isAdmin = session.username === 'admin';
+        const isNDY = session.role === 'staff' && (!session.companyName || session.companyName === 'NDY' || session.companyName === '관리자') && !isAdmin;
+        const isCustomer = session.role === 'customer';
+        const isLogistics = !isAdmin && !isNDY && !isCustomer && !!session.companyName;
+
+        // 1. 운수업체 정보 및 키워드 준비
+        const transportUsers = await authDb.user.findMany({
+            where: { role: 'transport' },
+            select: { companyName: true }
+        });
+        const transportKeywords = transportUsers.map(u => u.companyName?.toUpperCase()).filter(Boolean) as string[];
+        const baseKeywords = ['이룸', 'OUTSOURCED', 'ERUM', ...transportKeywords];
+
+        // 1.1 운수업체 기사 풀(Master Pool) 가져오기
         const driverPoolDelegate = (authDb as any).transportDriver;
+
+        // 검색용 회사 결정: 운수회사는 본인것만, 나머지는 전체 풀 조회 가능하도록
         const driverPool = driverPoolDelegate
-            ? await driverPoolDelegate.findMany({ where: { transportCompany: session.companyName || '이룸' } })
+            ? await driverPoolDelegate.findMany({
+                where: isLogistics ? { transportCompany: session.companyName as string } : {}
+            })
             : [];
 
         // 2. 오늘 등록된 기사 정보 가져오기
@@ -81,11 +98,9 @@ export async function getDailyDispatchData(dateStr: string) {
         const cbCodesSet = new Set(allOrders.filter(o => (o as any).cbCode).map(o => (o as any).cbCode as string));
         const cbCodes = Array.from(cbCodesSet);
 
-
         const deliveryPoints = await logisticsDb.deliveryPoint.findMany({
             where: { code: { in: cbCodes } }
         });
-
 
         // 4. 배차된 기사들의 상세 정보 가져오기 (t_car)
         const vehicles = await logisticsDb.vehicle.findMany({
@@ -103,27 +118,49 @@ export async function getDailyDispatchData(dateStr: string) {
             const legacyRealDriverName = fromLegacy(v.realDriverName);
             const driverPhoneFromMaster = fromLegacy(v.driverPhone); // CA_HP
 
-            // 조건 1: 기사명, 차량번호 중 본인 업체명 또는 'OUTSOURCED' 포함 여부 확인
-            const userCompany = (session.companyName || '이룸').toUpperCase();
-            const hasKeyword =
-                vehicleNo.toUpperCase().includes(userCompany) ||
-                vehicleNo.toUpperCase().includes('OUTSOURCED') ||
-                legacyRealDriverName.toUpperCase().includes(userCompany) ||
-                legacyRealDriverName.toUpperCase().includes(userCompany.replace(' ', '')) || // 공백 제거 대응
-                legacyRealDriverName.toUpperCase().includes('OUTSOURCED') ||
-                // 어드민은 기본적으로 '이룸' 키워드도 같이 봄
-                (session.role === 'admin' && (vehicleNo.toUpperCase().includes('이룸') || legacyRealDriverName.toUpperCase().includes('이룸')));
+            // 조건 1: 고정 차량 제외 (연락처가 마스터에 이미 있는 경우)
+            if (driverPhoneFromMaster && driverPhoneFromMaster.trim().length > 0) continue;
+
+            // 조건 2: 권한 및 키워드에 따른 필터링
+            const userCompany = (session.companyName || 'NDY').toUpperCase();
+            const normalizedVehicle = vehicleNo.toUpperCase();
+            const normalizedName = legacyRealDriverName.toUpperCase();
+
+            let hasKeyword = false;
+            if (isAdmin || isNDY) {
+                // 어드민/직원은 등록된 용차 키워드 중 하나라도 포함되어야 용차로 간주
+                // 이를 통해 '제품 입회' 등 기사가 지정되지 않은 일반 배차를 제외함
+                hasKeyword = baseKeywords.some(kw =>
+                    normalizedVehicle.includes(kw) || normalizedName.includes(kw)
+                );
+            } else if (isCustomer || isLogistics) {
+                // 외부 업체나 고객사는 본인 관련 키워드만 (OUTSOURCED 포함)
+                hasKeyword =
+                    normalizedVehicle.includes(userCompany) ||
+                    normalizedName.includes(userCompany) ||
+                    normalizedName.includes(userCompany.replace(' ', '')) ||
+                    normalizedVehicle.includes('OUTSOURCED') ||
+                    normalizedName.includes('OUTSOURCED');
+            }
 
             if (!hasKeyword) continue;
-
-            // 조건 2: 이미 연락처(CA_HP)가 있으면 제외 (고정차량)
-            if (driverPhoneFromMaster && driverPhoneFromMaster.trim().length > 0) continue;
 
             const decodedCode = fromLegacy(drvCode);
             const reg = registrations.find(r => r.driverName === decodedCode);
 
             // 해당 기사의 상세 배차 정보 계산
-            const orders = allOrders.filter(o => o.driverName === drvCode);
+            let orders = allOrders.filter(o => o.driverName === drvCode);
+
+            // [추가] 고객사인 경우 본인 회사 데이터만 보이도록 세부 필터링
+            if (isCustomer && session.companyName) {
+                orders = orders.filter(o => {
+                    const cName = fromLegacy(o.customerName);
+                    return cName?.includes(session.companyName || '');
+                });
+            }
+
+            // 필터링 후 배차가 없으면 스킵
+            if (orders.length === 0) continue;
 
             // 거래처별 요약 정보 생성
             const customerSummary: Record<string, DetailedDispatch> = {};
@@ -137,7 +174,6 @@ export async function getDailyDispatchData(dateStr: string) {
                 // 거래처 코드로 매칭되는 배송지 정보 찾기
                 const dp = deliveryPoints.find(p => p.code === (o as any).cbCode);
 
-
                 const address = fromLegacy(dp?.address);
                 const rawPhone = (fromLegacy(dp?.hp) || fromLegacy(dp?.phone)).trim();
                 const phone = (rawPhone && rawPhone !== '' && rawPhone !== '0' && rawPhone !== '0-0') ? rawPhone : null;
@@ -149,8 +185,6 @@ export async function getDailyDispatchData(dateStr: string) {
 
                 // 배송 순서 찾기 (매칭 정보와 일관성을 위해 디코딩된 기사명 사용)
                 const seqInfo = sequences.find((s: any) => s.driverName === decodedCode && s.cbCode === (o as any).cbCode);
-
-
 
                 if (!customerSummary[cName]) {
                     customerSummary[cName] = {
@@ -232,12 +266,22 @@ export async function addDriverToPool(formData: FormData) {
         const driverPoolDelegate = (authDb as any).transportDriver;
         if (!driverPoolDelegate) throw new Error('데이터베이스 초기화 중입니다. 잠시 후 다시 시도해 주세요.');
 
+        // 소속 회사 결정
+        let transportCompany = formData.get('transportCompany') as string;
+
+        // 보안 로직: 운수회사 계정은 본인 회사명으로 강제 고정
+        if (session.role === 'transport') {
+            transportCompany = session.companyName as string;
+        } else if (!transportCompany) {
+            transportCompany = session.companyName || 'NDY';
+        }
+
         await driverPoolDelegate.create({
             data: {
                 name,
                 phoneNumber,
                 vehicleNumber: vehicleNumber || null,
-                transportCompany: session.companyName || '이룸'
+                transportCompany: transportCompany
             }
         });
         revalidatePath('/daily-dispatch');
@@ -284,13 +328,22 @@ export async function updateDriverInPool(id: number, formData: FormData) {
             }
         }
 
+        // 수정할 데이터 구성
+        const updateData: any = {
+            name,
+            phoneNumber,
+            vehicleNumber: vehicleNumber || null
+        };
+
+        // 관리자는 소속 회사도 수정 가능
+        const transportCompany = formData.get('transportCompany') as string;
+        if ((session.role === 'admin' || session.role === 'staff') && transportCompany) {
+            updateData.transportCompany = transportCompany;
+        }
+
         await driverPoolDelegate.update({
             where: { id },
-            data: {
-                name,
-                phoneNumber,
-                vehicleNumber: vehicleNumber || null
-            }
+            data: updateData
         });
         revalidatePath('/daily-dispatch');
         return { success: true };

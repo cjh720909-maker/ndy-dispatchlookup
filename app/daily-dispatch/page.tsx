@@ -6,7 +6,7 @@ import {
     Search, User, Phone, Plus, Loader2, LogOut,
     FileText, UserCog, Settings, Trash2, X, Check,
     ChevronDown, ChevronUp, MapPin, Package, Scale, Navigation2,
-    Edit2, ChevronLeft, ChevronRight
+    Edit2, ChevronLeft, ChevronRight, ShieldCheck, Users
 } from 'lucide-react';
 import {
     getDailyDispatchData,
@@ -31,13 +31,14 @@ export default function DailyDispatchPage() {
 
     const [data, setData] = useState<DailyDispatchInfo[]>([]);
     const [driverPool, setDriverPool] = useState<TransportDriver[]>([]);
-    const [user, setUser] = useState<{ username: string; role: string } | null>(null);
+    const [user, setUser] = useState<{ username: string; role: string; companyName: string | null } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isRegistering, setIsRegistering] = useState<DailyDispatchInfo | null>(null);
     const [showPoolManager, setShowPoolManager] = useState(false);
     const [isActionPending, setIsActionPending] = useState(false);
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
     const [editingDriver, setEditingDriver] = useState<TransportDriver | null>(null);
+    const [confirmDeleteDriver, setConfirmDeleteDriver] = useState<TransportDriver | null>(null);
     const dateInputRef = useRef<HTMLInputElement>(null);
 
     const fetchData = useCallback(async () => {
@@ -72,10 +73,12 @@ export default function DailyDispatchPage() {
         setIsActionPending(false);
     };
 
-    const handleDeleteDriverFromPool = async (id: number) => {
-        if (!confirm('이 기사 정보를 삭제하시겠습니까?')) return;
+    const executeDeleteDriver = async () => {
+        if (!confirmDeleteDriver) return;
+        const targetId = confirmDeleteDriver.id;
+        setConfirmDeleteDriver(null);
         setIsActionPending(true);
-        const res = await deleteDriverFromPool(id);
+        const res = await deleteDriverFromPool(targetId);
         if (res.success) {
             fetchData();
         } else {
@@ -138,6 +141,19 @@ export default function DailyDispatchPage() {
     };
 
 
+    const unregisteredCount = data.filter(d => !d.isRegistered).length;
+
+    // 권한 체크 로직 (4단계 그룹화)
+    const isAdmin = user?.username === 'admin';
+    const isNDY = user?.role === 'staff' && (!user?.companyName || user?.companyName === 'NDY' || user?.companyName === '관리자') && !isAdmin;
+    const isCustomer = user?.role === 'customer';
+    const isLogistics = !isAdmin && !isNDY && !isCustomer && !!user?.companyName;
+
+    // 결품 조회 버튼 노출: 어드민, NDY팀, 고객사
+    const canSeeShortage = isAdmin || isNDY || isCustomer;
+    // 기사 관리/매칭 권한: 어드민, 운수회사
+    const canManagePool = isAdmin || isLogistics;
+
     const changeDate = (days: number) => {
         const target = new Date(selectedDate);
         target.setDate(target.getDate() + days);
@@ -152,8 +168,6 @@ export default function DailyDispatchPage() {
         }));
     };
 
-    const unregisteredCount = data.filter(d => !d.isRegistered).length;
-
     return (
         <div className="min-h-screen bg-slate-50">
             {/* Header */}
@@ -166,12 +180,23 @@ export default function DailyDispatchPage() {
                             </div>
                             <div>
                                 <h1 className="text-xl font-bold leading-tight">용차 배차</h1>
-                                <p className="text-slate-400 text-[10px] font-medium">관리 시스템</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">Logistics</p>
+                                    <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                                    <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700/30">
+                                        <p className="text-blue-400 text-[9px] font-black uppercase tracking-tighter">
+                                            {isAdmin ? 'Admin' : isNDY ? 'NDY Staff' : isCustomer ? 'Customer' : 'Logistics'}
+                                        </p>
+                                        <p className="text-slate-300 text-[9px] font-bold">
+                                            {user?.companyName || user?.username}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-1 sm:gap-2">
-                            {user?.role === 'admin' && (
+                            {canSeeShortage && (
                                 <Link
                                     href="/mobile/dispatch"
                                     className="mr-1 sm:mr-2 bg-slate-800 text-slate-200 px-3 py-1.5 rounded-xl text-[11px] font-bold hover:bg-slate-700 transition-colors border border-slate-700/50"
@@ -191,9 +216,9 @@ export default function DailyDispatchPage() {
 
                             <button
                                 onClick={() => setShowPoolManager(true)}
-                                disabled={user?.role === 'staff' && user?.username !== 'admin'}
-                                className={`p-1.5 sm:p-2 rounded-full text-slate-400 transition-colors ${(user?.role === 'staff' && user?.username !== 'admin') ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-800'}`}
-                                title={(user?.role === 'staff' && user?.username !== 'admin') ? "권한이 없습니다" : "기사 목록 관리"}
+                                disabled={!canManagePool}
+                                className={`p-1.5 sm:p-2 rounded-full text-slate-400 transition-colors ${!canManagePool ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-800'}`}
+                                title={!canManagePool ? "권한이 없습니다" : "기사 목록 관리"}
                             >
                                 <UserCog className="h-5 w-5" />
                             </button>
@@ -311,8 +336,8 @@ export default function DailyDispatchPage() {
                                                     e.stopPropagation();
                                                     setIsRegistering(item);
                                                 }}
-                                                disabled={user?.role === 'staff'}
-                                                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 active:scale-95 transition-all ${user?.role === 'staff'
+                                                disabled={!canManagePool}
+                                                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 active:scale-95 transition-all ${!canManagePool
                                                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                     : 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/10'
                                                     }`}
@@ -334,9 +359,9 @@ export default function DailyDispatchPage() {
                                                             e.stopPropagation();
                                                             setIsRegistering(item);
                                                         }}
-                                                        disabled={user?.role === 'staff'}
-                                                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-500 transition-colors"
-                                                        title="매칭 수정"
+                                                        disabled={!canManagePool}
+                                                        className={`p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-500 transition-colors ${!canManagePool ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                                        title={!canManagePool ? "권한이 없습니다" : "매칭 수정"}
                                                     >
                                                         <Edit2 className="h-3.5 w-3.5" />
                                                     </button>
@@ -383,7 +408,8 @@ export default function DailyDispatchPage() {
                                                                                             handleUpdateSequence(item.driverName, detail.cbCode || '', val);
                                                                                         }
                                                                                     }}
-                                                                                    className="w-10 h-7 text-center text-xs font-black border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all"
+                                                                                    readOnly={!canManagePool}
+                                                                                    className={`w-10 h-7 text-center text-xs font-black border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all ${!canManagePool ? 'opacity-50 cursor-default' : ''}`}
                                                                                     placeholder="-"
                                                                                 />
                                                                             </div>
@@ -445,7 +471,9 @@ export default function DailyDispatchPage() {
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-black text-slate-800 leading-tight">용차 기사 풀 관리</h3>
-                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Master Driver List</p>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                                        소속: <span className="text-blue-600">{user?.companyName || 'NDY'}</span>
+                                    </p>
                                 </div>
                             </div>
                             <button onClick={() => setShowPoolManager(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
@@ -457,22 +485,45 @@ export default function DailyDispatchPage() {
                             {/* Add Section */}
                             <section>
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">New Master Registration</h4>
-                                <form onSubmit={handleAddDriverToPool} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-3xl">
-                                    <div className="sm:col-span-1">
-                                        <input name="name" placeholder="기사 성함" required className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <input name="phoneNumber" placeholder="연락처 (010-...)" required className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <input name="vehicleNumber" placeholder="차량번호 (선택)" className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <form onSubmit={handleAddDriverToPool} className="flex flex-col gap-3 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">Name</label>
+                                            <input name="name" placeholder="기사 성함" required className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">Phone</label>
+                                            <input name="phoneNumber" placeholder="연락처 (010-...)" required className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">Vehicle No (Optional)</label>
+                                            <input name="vehicleNumber" placeholder="차량번호" className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 ml-1 uppercase">Company Affiliation</label>
+                                            <div className="relative">
+                                                <input
+                                                    name="transportCompany"
+                                                    defaultValue={user?.companyName || 'NDY'}
+                                                    readOnly={isAdmin ? false : true}
+                                                    required
+                                                    className={`w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all ${isAdmin ? 'bg-white focus:ring-2 focus:ring-blue-500' : 'bg-slate-100 text-slate-500 cursor-not-allowed'}`}
+                                                    placeholder="소속 회사명"
+                                                />
+                                                {!isAdmin && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                        <ShieldCheck className="h-4 w-4 text-slate-300" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={isActionPending}
-                                        className="bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest disabled:opacity-50 transition-all hover:translate-y-[-1px] active:translate-y-[1px]"
+                                        className="mt-2 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
                                     >
-                                        {isActionPending ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Register'}
+                                        {isActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" /> Register New Driver</>}
                                     </button>
                                 </form>
                             </section>
@@ -480,45 +531,79 @@ export default function DailyDispatchPage() {
                             {/* Pool List */}
                             <section>
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Active Pool ({driverPool.length})</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3">
                                     {driverPool.map(driver => (
-                                        <div key={driver.id} className="bg-white border border-slate-100 rounded-3xl p-5 flex flex-col gap-4 group hover:border-blue-200 transition-all">
+                                        <div key={driver.id} className="bg-white border border-slate-100 rounded-3xl p-5 group hover:border-blue-200 transition-all">
                                             {editingDriver?.id === driver.id ? (
-                                                <form onSubmit={handleUpdateDriverInPool} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                                    <input name="name" defaultValue={driver.name} required className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500" />
-                                                    <input name="phoneNumber" defaultValue={driver.phoneNumber} required className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500" />
-                                                    <input name="vehicleNumber" defaultValue={driver.vehicleNumber || ''} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500" placeholder="차량번호" />
-                                                    <div className="sm:col-span-3 flex justify-end gap-2 mt-2">
+                                                <form onSubmit={handleUpdateDriverInPool} className="flex flex-col gap-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-black text-slate-400 ml-1 uppercase">Name</label>
+                                                            <input name="name" defaultValue={driver.name} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-black text-slate-400 ml-1 uppercase">Phone</label>
+                                                            <input name="phoneNumber" defaultValue={driver.phoneNumber} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-black text-slate-400 ml-1 uppercase">Vehicle</label>
+                                                            <input name="vehicleNumber" defaultValue={driver.vehicleNumber || ''} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500" placeholder="차량번호" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-black text-slate-400 ml-1 uppercase">Company</label>
+                                                            <input
+                                                                name="transportCompany"
+                                                                defaultValue={driver.transportCompany}
+                                                                readOnly={isAdmin ? false : true}
+                                                                required
+                                                                className={`w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none ${isAdmin ? 'bg-slate-50 focus:ring-1 focus:ring-blue-500' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-end gap-2">
                                                         <button type="button" onClick={() => setEditingDriver(null)} className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-600">Cancel</button>
-                                                        <button type="submit" disabled={isActionPending} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/20">Save</button>
+                                                        <button type="submit" disabled={isActionPending} className="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/20 active:scale-95">Save Changes</button>
                                                     </div>
                                                 </form>
                                             ) : (
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-black group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
+                                                        <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-black group-hover:bg-blue-50 group-hover:text-blue-600 transition-all text-lg">
                                                             {driver.name[0]}
                                                         </div>
                                                         <div>
-                                                            <p className="font-black text-slate-800">{driver.name}</p>
-                                                            <p className="text-[10px] text-slate-400 font-bold">{driver.phoneNumber}</p>
-                                                            {driver.vehicleNumber && <p className="text-[9px] text-blue-500 font-bold mt-0.5">{driver.vehicleNumber}</p>}
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-black text-slate-800">{driver.name}</p>
+                                                                <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black border border-slate-200 uppercase tracking-tighter">
+                                                                    {driver.transportCompany}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-1">
+                                                                <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                                                    <Phone className="h-3 w-3" /> {driver.phoneNumber}
+                                                                </p>
+                                                                {driver.vehicleNumber && (
+                                                                    <p className="text-[10px] text-blue-500 font-bold flex items-center gap-1">
+                                                                        <Truck className="h-3 w-3" /> {driver.vehicleNumber}
+                                                                    </p>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-1">
                                                         <button
                                                             onClick={() => setEditingDriver(driver)}
-                                                            className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                                                            className="p-2.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
                                                             title="수정"
                                                         >
-                                                            <Edit2 className="h-4.5 w-4.5" />
+                                                            <Edit2 className="h-5 w-5" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDeleteDriverFromPool(driver.id)}
-                                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                            onClick={() => setConfirmDeleteDriver(driver)}
+                                                            className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                                             title="삭제"
                                                         >
-                                                            <Trash2 className="h-4.5 w-4.5" />
+                                                            <Trash2 className="h-5 w-5" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -526,13 +611,44 @@ export default function DailyDispatchPage() {
                                         </div>
                                     ))}
                                     {driverPool.length === 0 && (
-                                        <div className="col-span-2 py-10 text-center text-slate-300 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+                                        <div className="py-20 text-center text-slate-300 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100">
+                                            <Users className="h-10 w-10 mx-auto mb-4 opacity-20" />
                                             <p className="text-sm font-bold italic">등록된 기사 풀이 없습니다. 기사님을 먼저 등록해 주세요.</p>
                                         </div>
                                     )}
                                 </div>
-                                <p className="mt-6 text-[10px] text-slate-400 text-center font-bold">전담 기사님 정보를 등록해두면 매일 편리하게 매칭할 수 있습니다.</p>
+                                <p className="mt-8 text-[10px] text-slate-400 text-center font-bold uppercase tracking-widest">Master Driver Pool Management System</p>
                             </section>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Driver Delete Confirmation Modal */}
+            {confirmDeleteDriver && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-6">
+                            <Trash2 className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 text-center mb-2">기사 정보 삭제</h3>
+                        <p className="text-slate-500 text-center text-sm font-medium mb-8 leading-relaxed">
+                            <span className="text-red-600 font-bold">[{confirmDeleteDriver.name}]</span> 기사님 정보를 풀에서 삭제하시겠습니까?<br />
+                            <span className="text-[11px] opacity-70">이 작업은 되돌릴 수 없으며 향후 매칭 시 다시 등록해야 합니다.</span>
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setConfirmDeleteDriver(null)}
+                                className="py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={executeDeleteDriver}
+                                className="py-4 rounded-2xl font-black text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all active:scale-95"
+                            >
+                                삭제하기
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -554,14 +670,14 @@ export default function DailyDispatchPage() {
                                     <Truck className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Dispatched Vehicle</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">배정 차량</p>
                                     <p className="text-lg font-black leading-tight">{isRegistering.vehicleNo}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="p-8">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Select Driver from Pool</h4>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">기사 풀에서 선택</h4>
                             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                                 {driverPool.map(driver => (
                                     <button
@@ -586,7 +702,7 @@ export default function DailyDispatchPage() {
                                 ))}
                                 {driverPool.length === 0 && (
                                     <div className="py-10 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                                        <p className="text-sm font-black text-slate-300">POOL IS EMPTY</p>
+                                        <p className="text-sm font-black text-slate-300">등록된 기사가 없습니다</p>
                                         <button
                                             onClick={() => {
                                                 setIsRegistering(null);
@@ -604,7 +720,7 @@ export default function DailyDispatchPage() {
                                 onClick={() => setIsRegistering(null)}
                                 className="w-full mt-6 py-4 rounded-3xl text-sm font-black text-slate-400 hover:bg-slate-50 transition-colors uppercase tracking-[0.2em]"
                             >
-                                Cancel
+                                취소
                             </button>
                         </div>
                     </div>

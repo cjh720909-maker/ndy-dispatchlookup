@@ -57,3 +57,7 @@ daily-logistics-system/node_modules/
 /prisma/auth/auth.db
 *.db
 *.db-journal
+
+# logs
+action_trace.log
+

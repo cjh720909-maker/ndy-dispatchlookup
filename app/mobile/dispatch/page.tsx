@@ -176,7 +176,7 @@ export default function App() {
               <Truck className="h-5 w-5" /> 배차 조회
             </h1>
             <div className="flex items-center gap-2">
-              {(userRole === 'admin' || userRole === 'staff' || currentUser === 'admin') && (
+              {(userRole === 'admin' || userRole === 'staff') && (
                 <Link
                   href="/daily-dispatch"
                   className="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2.5 py-1 rounded-full font-black shadow-lg shadow-amber-500/20 transition-all border border-amber-400"
@@ -189,7 +189,7 @@ export default function App() {
                   href="/admin/users"
                   className="text-xs bg-white text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-full font-bold transition-colors"
                 >
-                  아이디 관리
+                  계정 관리
                 </Link>
               )}
               <Link

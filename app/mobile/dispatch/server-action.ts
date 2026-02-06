@@ -72,14 +72,23 @@ export async function getRealDispatchData(searchTerm: string, dateStr?: string):
       date: targetDateStr,
     };
 
-    // [수정] 관리자 또는 내부 직원은 전체 데이터를 볼 수 있어야 함
-    const isInternal = session.username === 'admin' || session.companyName === '관리자' || !session.companyName;
+    // 4단계 권한 체크
+    const isAdmin = session.username === 'admin';
+    const isNDY = session.role === 'staff' && (!session.companyName || session.companyName === 'NDY' || session.companyName === '관리자') && !isAdmin;
+    const isCustomer = session.role === 'customer';
+    const isLogistics = !isAdmin && !isNDY && !isCustomer && !!session.companyName;
 
-    if (!isInternal) {
-      // 외부 협력사만 본인 데이터로 제한
-      const legacyCompanyName = toLegacy(session.companyName);
-      whereCondition.companyNameInTable = { contains: legacyCompanyName };
+    if (isLogistics) {
+      // 운수회사(staff이면서 companyName이 있는 경우)는 결품조회 접근 불가
+      return { data: [], totalCount: 0, error: '운수회사는 결품조회 권한이 없습니다.' };
     }
+
+    if (isCustomer && session.companyName) {
+      // 고객사는 본인 데이터만 조회
+      const legacyCompanyName = toLegacy(session.companyName);
+      whereCondition.customerName = { contains: legacyCompanyName };
+    }
+    // 관리자(isAdmin)와 NDY팀(isNDY)은 whereCondition에 회사 제한 없이 전체 조회 가능
 
     if (searchTerm && searchTerm.trim().length > 0) {
       const legacySearch = toLegacy(searchTerm);

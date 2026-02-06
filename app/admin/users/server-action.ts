@@ -1,6 +1,7 @@
 'use server';
 
 import { authDb } from '../../../lib/db';
+import { getSession } from '../../../lib/auth';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 
@@ -8,6 +9,10 @@ import { revalidatePath } from 'next/cache';
  * 모든 사용자 목록을 가져옵니다. (아이디 기준 오름차순)
  */
 export async function getUsers() {
+    const session = await getSession();
+    if (!session || (session.username !== 'admin' && session.role !== 'admin')) {
+        return { error: '관리자 권한이 필요합니다.' };
+    }
     try {
         const users = await authDb.user.findMany({
             orderBy: { username: 'asc' },
@@ -30,6 +35,11 @@ export async function getUsers() {
  * 신규 사용자를 생성합니다.
  */
 export async function addUser(formData: FormData) {
+    const session = await getSession();
+    if (!session || (session.username !== 'admin' && session.role !== 'admin')) {
+        return { error: '관리자 권한이 필요합니다.' };
+    }
+
     const username = formData.get('username') as string;
     const password = formData.get('password') as string;
     const role = formData.get('role') as string;
@@ -46,11 +56,13 @@ export async function addUser(formData: FormData) {
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('[addUser] Password hashed successfully');
 
+        const finalRole = companyName === '관리자' ? 'admin' : (role || 'customer');
+
         const newUser = await authDb.user.create({
             data: {
                 username,
                 password: hashedPassword,
-                role: role || 'customer',
+                role: finalRole,
                 companyName: companyName || null,
             }
         });
@@ -81,20 +93,38 @@ export async function addUser(formData: FormData) {
  * 사용자를 삭제합니다.
  */
 export async function deleteUser(id: number) {
+    const session = await getSession();
+    console.log(`[deleteUser] Action called by session: ${JSON.stringify(session)}, ID: ${id}`);
+
+    if (!session || (session.username !== 'admin' && session.role !== 'admin')) {
+        const sessionInfo = session ? ` (User: ${session.username}, Role: ${session.role})` : ' (No Session Found)';
+        console.log(`[deleteUser] Permission denied.${sessionInfo}`);
+        return { error: `관리자 권한이 필요합니다.${sessionInfo}` };
+    }
+
     try {
-        // admin 계정은 삭제 방지 (필요 시)
-        const user = await authDb.user.findUnique({ where: { id } });
-        if (user?.username === 'admin') {
+        const targetId = Number(id);
+        if (isNaN(targetId)) throw new Error('Invalid User ID');
+
+        const user = await authDb.user.findUnique({ where: { id: targetId } });
+        if (!user) {
+            console.log(`[deleteUser] User not found with ID: ${targetId}`);
+            return { error: '사용자를 찾을 수 없습니다.' };
+        }
+
+        if (user.username === 'admin') {
+            console.log('[deleteUser] Attempted to delete admin account');
             return { error: '기본 관리자 계정은 삭제할 수 없습니다.' };
         }
 
-        await authDb.user.delete({ where: { id } });
+        await authDb.user.delete({ where: { id: targetId } });
+        console.log(`[deleteUser] Successfully deleted user: ${user.username}`);
 
         revalidatePath('/admin/users');
         return { success: true };
-    } catch (error) {
-        console.error('[deleteUser Error]', error);
-        return { error: '사용자 삭제 중 오류가 발생했습니다.' };
+    } catch (error: any) {
+        console.log(`[deleteUser Error] ${error.message}`);
+        return { error: `사용자 삭제 중 오류가 발생했습니다: ${error.message}` };
     }
 }
 
@@ -102,15 +132,38 @@ export async function deleteUser(id: number) {
  * 사용자의 비밀번호를 '1234'로 초기화합니다.
  */
 export async function resetUserPassword(id: number) {
+    const session = await getSession();
+    console.log(`[resetUserPassword] Starting reset for User ID: ${id}. Session: ${JSON.stringify(session)}`);
+
+    if (!session || (session.username !== 'admin' && session.role !== 'admin')) {
+        const sessionInfo = session ? ` (User: ${session.username}, Role: ${session.role})` : ' (No Session Found)';
+        console.log(`[resetUserPassword] Permission denied.${sessionInfo}`);
+        return { error: `관리자 권한이 필요합니다.${sessionInfo}` };
+    }
+
     try {
+        const targetId = Number(id);
+        if (isNaN(targetId)) throw new Error('Invalid User ID');
+
+        const user = await authDb.user.findUnique({ where: { id: targetId } });
+        if (!user) {
+            console.log(`[resetUserPassword] User not found with ID: ${targetId}`);
+            return { error: '사용자를 찾을 수 없습니다.' };
+        }
+
         const hashedPassword = await bcrypt.hash('1234', 10);
-        await authDb.user.update({
-            where: { id },
+        console.log('[resetUserPassword] New password hashed successfully');
+
+        const updatedUser = await authDb.user.update({
+            where: { id: targetId },
             data: { password: hashedPassword }
         });
+        console.log(`[resetUserPassword] Successfully reset password for: ${updatedUser.username}`);
+
+        revalidatePath('/admin/users');
         return { success: true };
-    } catch (error) {
-        console.error('[resetUserPassword Error]', error);
-        return { error: '비밀번호 초기화 중 오류가 발생했습니다.' };
+    } catch (error: any) {
+        console.log(`[resetUserPassword Error] ${error.message}`);
+        return { error: `비밀번호 초기화 중 오류가 발생했습니다: ${error.message}` };
     }
 }

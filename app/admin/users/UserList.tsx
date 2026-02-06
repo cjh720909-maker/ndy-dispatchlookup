@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { deleteUser, resetUserPassword } from './server-action';
-import { Trash2, ShieldCheck, User, Building2, Calendar, Users, RotateCcw } from 'lucide-react';
+import { Trash2, ShieldCheck, User, Building2, Calendar, Users, RotateCcw, Loader2 } from 'lucide-react';
 
 interface UserData {
     id: number;
@@ -13,40 +13,94 @@ interface UserData {
 }
 
 export default function UserList({ initialUsers }: { initialUsers: any[] }) {
-    const [users, setUsers] = useState(initialUsers);
+    const [users, setUsers] = useState<UserData[]>(initialUsers);
+    const [loadingIds, setLoadingIds] = useState<Record<number, boolean>>({});
 
-    // 서버 사이드 데이터가 업데이트될 때(revalidatePath 등) 클라이언트 상태도 동기화
+    // 모달 상태
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        type: 'delete' | 'reset';
+        id: number;
+        username: string;
+    }>({ isOpen: false, type: 'delete', id: 0, username: '' });
+
     useEffect(() => {
         setUsers(initialUsers);
     }, [initialUsers]);
 
-    async function handleDelete(id: number) {
-        if (!confirm('이 계정을 정말 삭제하시겠습니까?')) return;
-
-        // Optimistic delete
+    async function executeDelete(id: number) {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setLoadingIds(prev => ({ ...prev, [id]: true }));
         const originalUsers = [...users];
         setUsers(users.filter(u => u.id !== id));
 
-        const result = await deleteUser(id);
-        if (result?.error) {
-            alert(result.error);
+        try {
+            const result = await deleteUser(id);
+            if (result?.error) {
+                alert(result.error);
+                setUsers(originalUsers);
+            }
+        } catch (e: any) {
+            alert('🚨 삭제 중 시스템 오류: ' + e.message);
             setUsers(originalUsers);
+        } finally {
+            setLoadingIds(prev => ({ ...prev, [id]: false }));
         }
     }
 
-    async function handleResetPassword(id: number, username: string) {
-        if (!confirm(`[${username}] 계정의 비밀번호를 '1234'로 초기화하시겠습니까?`)) return;
-
-        const result = await resetUserPassword(id);
-        if (result?.error) {
-            alert(result.error);
-        } else {
-            alert('비밀번호가 1234로 초기화되었습니다.');
+    async function executeReset(id: number, username: string) {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setLoadingIds(prev => ({ ...prev, [id]: true }));
+        try {
+            const result = await resetUserPassword(id);
+            if (result?.error) {
+                alert(result.error);
+            } else {
+                alert('비밀번호가 1234로 초기화되었습니다.');
+            }
+        } catch (e: any) {
+            alert('🚨 초기화 중 시스템 오류: ' + e.message);
+        } finally {
+            setLoadingIds(prev => ({ ...prev, [id]: false }));
         }
     }
 
     return (
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md relative">
+            {/* 커스텀 컨펌 모달 */}
+            {confirmModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${confirmModal.type === 'delete' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'}`}>
+                            {confirmModal.type === 'delete' ? <Trash2 className="h-8 w-8" /> : <RotateCcw className="h-8 w-8" />}
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 text-center mb-2">
+                            {confirmModal.type === 'delete' ? '계정 삭제' : '비밀번호 초기화'}
+                        </h3>
+                        <p className="text-slate-500 text-center text-sm font-medium mb-8 leading-relaxed">
+                            {confirmModal.type === 'delete' ?
+                                <><span className="text-red-600 font-bold">[{confirmModal.username}]</span> 계정을 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</> :
+                                <><span className="text-amber-600 font-bold">[{confirmModal.username}]</span> 계정의 비밀번호를 <span className="font-bold underline">1234</span>로 초기화하시겠습니까?</>
+                            }
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                                className="py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={() => confirmModal.type === 'delete' ? executeDelete(confirmModal.id) : executeReset(confirmModal.id, confirmModal.username)}
+                                className={`py-4 rounded-2xl font-black text-white shadow-lg transition-all active:scale-95 ${confirmModal.type === 'delete' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'}`}
+                            >
+                                확인
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                 <div>
                     <h2 className="text-xl font-bold text-slate-800">등록된 계정 목록</h2>
@@ -80,13 +134,15 @@ export default function UserList({ initialUsers }: { initialUsers: any[] }) {
                                     </div>
                                 </td>
                                 <td className="px-8 py-5 whitespace-nowrap">
-                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-tight ${user.role === 'staff' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                                        user.role === 'transport' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                            'bg-slate-50 text-slate-600 border border-slate-100'
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-tight ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+                                        user.role === 'staff' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                            user.role === 'transport' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                'bg-slate-50 text-slate-600 border border-slate-100'
                                         }`}>
                                         <ShieldCheck className="h-3 w-3" />
-                                        {user.role === 'staff' ? '직원' :
-                                            user.role === 'transport' ? '운수업체' : '고객사'}
+                                        {user.role === 'admin' ? '시스템 관리자' :
+                                            user.role === 'staff' ? '직원' :
+                                                user.role === 'transport' ? '운수업체' : '고객사'}
                                     </span>
                                 </td>
                                 <td className="px-8 py-5 whitespace-nowrap shadow-none border-none">
@@ -109,18 +165,20 @@ export default function UserList({ initialUsers }: { initialUsers: any[] }) {
                                     {user.username !== 'admin' ? (
                                         <div className="flex items-center justify-end gap-1">
                                             <button
-                                                onClick={() => handleResetPassword(user.id, user.username)}
-                                                className="p-2.5 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all active:scale-95"
+                                                onClick={() => setConfirmModal({ isOpen: true, type: 'reset', id: user.id, username: user.username })}
+                                                disabled={loadingIds[user.id]}
+                                                className={`p-2.5 rounded-xl transition-all active:scale-95 ${loadingIds[user.id] ? 'text-amber-500 bg-amber-50' : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50'}`}
                                                 title="비밀번호 초기화 (1234)"
                                             >
-                                                <RotateCcw className="h-5 w-5" />
+                                                {loadingIds[user.id] ? <Loader2 className="h-5 w-5 animate-spin" /> : <RotateCcw className="h-5 w-5" />}
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(user.id)}
-                                                className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+                                                onClick={() => setConfirmModal({ isOpen: true, type: 'delete', id: user.id, username: user.username })}
+                                                disabled={loadingIds[user.id]}
+                                                className={`p-2.5 rounded-xl transition-all active:scale-95 ${loadingIds[user.id] ? 'text-red-500 bg-red-50' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}
                                                 title="계정 삭제"
                                             >
-                                                <Trash2 className="h-5 w-5" />
+                                                {loadingIds[user.id] ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
                                             </button>
                                         </div>
                                     ) : (
