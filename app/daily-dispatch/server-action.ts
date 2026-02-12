@@ -372,13 +372,13 @@ export async function matchDriver(date: string, driverCode: string, poolDriverId
                 date_driverName_transportCompany: {
                     date,
                     driverName: driverCode,
-                    transportCompany: session.companyName || '이룸'
+                    transportCompany: poolDriver.transportCompany
                 }
             },
             create: {
                 date,
                 driverName: driverCode,
-                transportCompany: session.companyName || '이룸',
+                transportCompany: poolDriver.transportCompany,
                 vehicleNumber: poolDriver.vehicleNumber,
                 phoneNumber: poolDriver.phoneNumber,
                 realDriverName: poolDriver.name
