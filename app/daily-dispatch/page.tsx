@@ -314,6 +314,11 @@ export default function DailyDispatchPage() {
                                                 {!item.isRegistered && (
                                                     <span className="text-[9px] font-black px-1 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-100 uppercase shrink-0">OUTSOURCED</span>
                                                 )}
+                                                {item.transportCompany && item.transportCompany !== '미지정' && (
+                                                     <span className="text-[9px] font-black px-1 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 uppercase shrink-0">
+                                                        {item.transportCompany}
+                                                    </span>
+                                                )}
                                                 <span className="text-[11px] text-slate-400 truncate ml-1 hidden sm:inline-block">
                                                     {item.details.map(d => d.customerName).join(', ')}
                                                 </span>

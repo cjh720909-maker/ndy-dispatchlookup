@@ -224,7 +224,7 @@ export async function getDailyDispatchData(dateStr: string) {
                 realDriverName: displayName,
                 vehicleNo: reg?.vehicleNumber || vehicleNo || '-',
                 vehicleType: 'outsourced',
-                transportCompany: userCompany,
+                transportCompany: reg?.transportCompany || ((isAdmin || isNDY) ? '미지정' : userCompany),
                 phoneNumber: reg?.phoneNumber || null,
                 isRegistered: !!reg,
                 dispatchCount: Object.keys(customerSummary).length,
