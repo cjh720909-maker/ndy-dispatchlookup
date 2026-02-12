@@ -310,10 +310,16 @@ export default function DailyDispatchPage() {
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h4 className="font-black text-slate-800 text-base leading-none truncate">{item.realDriverName}</h4>
+                                                <h4 className="font-black text-slate-800 text-base leading-none truncate shrink-0">{item.realDriverName}</h4>
                                                 {!item.isRegistered && (
                                                     <span className="text-[9px] font-black px-1 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-100 uppercase shrink-0">OUTSOURCED</span>
                                                 )}
+                                                <span className="text-[11px] text-slate-400 truncate ml-1 hidden sm:inline-block">
+                                                    {item.details.map(d => d.customerName).join(', ')}
+                                                </span>
+                                                <span className="text-[11px] text-slate-400 truncate ml-1 sm:hidden">
+                                                    {item.details.length > 0 ? (item.details.length > 1 ? `${item.details[0].customerName} 외 ${item.details.length - 1}건` : item.details[0].customerName) : ''}
+                                                </span>
                                             </div>
                                             <p className="text-slate-500 text-[11px] mt-1.5 font-bold flex items-center gap-1">
                                                 <Truck className="h-3 w-3 text-slate-400" /> {item.vehicleNo}
