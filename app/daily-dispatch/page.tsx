@@ -181,12 +181,12 @@ export default function DailyDispatchPage() {
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-3">
-                            <div className="bg-blue-600 p-2 rounded-lg">
+                            <div className="hidden sm:block bg-blue-600 p-2 rounded-lg">
                                 <Truck className="h-5 w-5" />
                             </div>
                             <div>
                                 <h1 className="text-xl font-bold leading-tight">용차 배차</h1>
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="hidden sm:flex items-center gap-2 mt-1">
                                     <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">Logistics</p>
                                     <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
                                     <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700/30">
