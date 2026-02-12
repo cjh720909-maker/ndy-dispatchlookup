@@ -26,6 +26,12 @@ export default function DailyDispatchPage() {
     const [selectedDate, setSelectedDate] = useState(() => {
         const now = new Date();
         const kstNow = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 60 * 60 * 1000));
+        
+        // 오후 6시(18시) 이후에는 다음 날짜로 설정
+        if (kstNow.getHours() >= 18) {
+            kstNow.setDate(kstNow.getDate() + 1);
+        }
+
         return kstNow.toISOString().split('T')[0];
     });
 
