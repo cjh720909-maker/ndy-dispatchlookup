@@ -367,23 +367,20 @@ export async function matchDriver(date: string, driverCode: string, poolDriverId
 
         if (!poolDriver) return { error: '선택한 기사 정보가 없습니다.' };
 
-        await authDb.dailyDriverRegistration.upsert({
+        // 1. 해당 슬롯(날짜+기사코드)에 대한 기존 매칭 정보 삭제 (어떤 운수사로 등록되어 있든 삭제)
+        await authDb.dailyDriverRegistration.deleteMany({
             where: {
-                date_driverName_transportCompany: {
-                    date,
-                    driverName: driverCode,
-                    transportCompany: poolDriver.transportCompany
-                }
-            },
-            create: {
+                date,
+                driverName: driverCode
+            }
+        });
+
+        // 2. 새로운 매칭 정보 생성
+        await authDb.dailyDriverRegistration.create({
+            data: {
                 date,
                 driverName: driverCode,
                 transportCompany: poolDriver.transportCompany,
-                vehicleNumber: poolDriver.vehicleNumber,
-                phoneNumber: poolDriver.phoneNumber,
-                realDriverName: poolDriver.name
-            },
-            update: {
                 vehicleNumber: poolDriver.vehicleNumber,
                 phoneNumber: poolDriver.phoneNumber,
                 realDriverName: poolDriver.name
