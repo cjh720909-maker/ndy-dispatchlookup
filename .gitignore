@@ -61,3 +61,6 @@ daily-logistics-system/node_modules/
 # logs
 action_trace.log
 
+data/
+.env
+*.db

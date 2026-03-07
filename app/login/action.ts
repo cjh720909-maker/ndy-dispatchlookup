@@ -44,8 +44,8 @@ export async function login(formData: FormData) {
         if (user.role === 'customer') {
             redirect('/mobile/dispatch');
         } else {
-            // 직원(staff) 또는 운수업체(transport)는 당일 배차 화면으로
-            redirect('/daily-dispatch');
+            // 모든 사용자를 결품 조회(배차 조회) 화면으로 리다이렉트
+            redirect('/mobile/dispatch');
         }
 
     } catch (error) {
