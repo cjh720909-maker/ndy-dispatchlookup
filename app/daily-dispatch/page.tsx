@@ -25,14 +25,15 @@ import Link from 'next/link';
 export default function DailyDispatchPage() {
     const [selectedDate, setSelectedDate] = useState(() => {
         const now = new Date();
-        const kstNow = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 60 * 60 * 1000));
-        
-        // 오후 6시(18시) 이후에는 다음 날짜로 설정
-        if (kstNow.getHours() >= 18) {
-            kstNow.setDate(kstNow.getDate() + 1);
+        const kstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+
+        // KST 기준 오후 6시(18시) 이후에는 다음 날짜로 설정
+        // UTC 시간으로 계산된 kstTime 내에서 '시간' 값은 getUTCHours()로 접근해야 KST 시간 수치를 얻음
+        if (kstTime.getUTCHours() >= 18) {
+            kstTime.setUTCDate(kstTime.getUTCDate() + 1);
         }
 
-        return kstNow.toISOString().split('T')[0];
+        return kstTime.toISOString().split('T')[0];
     });
 
     const [data, setData] = useState<DailyDispatchInfo[]>([]);
@@ -161,8 +162,8 @@ export default function DailyDispatchPage() {
     const canManagePool = isAdmin || isLogistics;
 
     const changeDate = (days: number) => {
-        const target = new Date(selectedDate);
-        target.setDate(target.getDate() + days);
+        const [year, month, day] = selectedDate.split('-').map(Number);
+        const target = new Date(Date.UTC(year, month - 1, day + days));
         const newDate = target.toISOString().split('T')[0];
         setSelectedDate(newDate);
     };
@@ -321,7 +322,7 @@ export default function DailyDispatchPage() {
                                                     <span className="text-[9px] font-black px-1 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-100 uppercase shrink-0">OUTSOURCED</span>
                                                 )}
                                                 {item.transportCompany && item.transportCompany !== '미지정' && (
-                                                     <span className="text-[9px] font-black px-1 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 uppercase shrink-0">
+                                                    <span className="text-[9px] font-black px-1 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 uppercase shrink-0">
                                                         {item.transportCompany}
                                                     </span>
                                                 )}
